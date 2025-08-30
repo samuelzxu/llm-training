@@ -1,0 +1,66 @@
+isc_project_id = "prj-beautiful-plucky-amount-250802"
+experiment_name = "acc-int-tst"
+gpus = 8
+compute_mode = "interruptible"
+dataset_id_list = ["uds-three-pale-accelerator-250802", "uds-brazen-meowing-munchkin-250513", "uds-leaf-various-bosworth-250513"]
+command = '''
+source /root/LLM-Workshop/accel/bin/activate && 
+echo "MASTER_PORT: $MASTER_PORT" &&
+echo "MASTER_ADDR: $MASTER_ADDR" &&
+echo "RANK: $RANK" &&
+echo "NNODES: $NNODES" &&
+echo "N_PROC: $N_PROC" &&
+CONFIG_FILE="/root/LLM-Workshop/chat_assistant/sft/training/configs/deepspeed_config_z3_qlora.yaml" &&
+sed -i "s/^main_process_ip:.*/main_process_ip: $MASTER_ADDR/" "$CONFIG_FILE" &&
+sed -i "s/^main_process_port:.*/main_process_port: $MASTER_PORT/" "$CONFIG_FILE" &&
+sed -i "s/^machine_rank:.*/machine_rank: $RANK/" "$CONFIG_FILE" &&
+sed -i "s/^num_machines:.*/num_machines: $NNODES/" "$CONFIG_FILE" &&
+sed -i "s/^num_processes:.*/num_processes: $N_PROC/" "$CONFIG_FILE" &&
+cat "$CONFIG_FILE" &&
+accelerate launch --config_file "$CONFIG_FILE"  /root/LLM-Workshop/chat_assistant/sft/training/train.py \
+--seed 100 \
+--main_process_port $MASTER_PORT \
+--main_process_ip $MASTER_ADDR \
+--machine_rank $RANK \
+--num_machines $NNODES \
+--num_processes $N_PROC \
+--model_name_or_path "/data/uds-leaf-various-bosworth-250513" \
+--dataset_name "smangrul/ultrachat-10k-chatml" \
+--chat_template_format "chatml" \
+--add_special_tokens False \
+--append_concat_token False \
+--splits "train,test" \
+--max_seq_len 10000 \
+--num_train_epochs 1 \
+--logging_steps 5 \
+--log_level "info" \
+--logging_strategy "steps" \
+--evaluation_strategy "epoch" \
+--save_strategy "epoch" \
+--push_to_hub \
+--hub_private_repo True \
+--hub_strategy "every_save" \
+--bf16 True \
+--packing True \
+--learning_rate 1e-4 \
+--lr_scheduler_type "cosine" \
+--weight_decay 1e-4 \
+--warmup_ratio 0.0 \
+--max_grad_norm 1.0 \
+--output_dir "llama-sft-qlora-ds" \
+--per_device_train_batch_size 2 \
+--per_device_eval_batch_size 2 \
+--gradient_accumulation_steps 2 \
+--gradient_checkpointing True \
+--use_reentrant True \
+--dataset_text_field "content" \
+--use_flash_attn True \
+--use_peft_lora True \
+--lora_r 8 \
+--lora_alpha 16 \
+--lora_dropout 0.1 \
+--lora_target_modules "all-linear" \
+--use_4bit_quantization True \
+--use_nested_quant True \
+--bnb_4bit_compute_dtype "bfloat16" \
+--bnb_4bit_quant_storage_dtype "bfloat16"'''

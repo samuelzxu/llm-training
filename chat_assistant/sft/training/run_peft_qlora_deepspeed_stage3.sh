@@ -1,12 +1,12 @@
 accelerate launch --config_file "configs/deepspeed_config_z3_qlora.yaml"  train.py \
 --seed 100 \
---model_name_or_path "meta-llama/Llama-2-70b-hf" \
+--model_name_or_path "/data/uds-leaf-various-bosworth-250513" \
 --dataset_name "smangrul/ultrachat-10k-chatml" \
 --chat_template_format "chatml" \
 --add_special_tokens False \
 --append_concat_token False \
 --splits "train,test" \
---max_seq_len 2048 \
+--max_seq_len 10000 \
 --num_train_epochs 1 \
 --logging_steps 5 \
 --log_level "info" \

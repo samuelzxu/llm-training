@@ -6,7 +6,7 @@ git+https://github.com/huggingface/datatrove.git
 unsloth[conda]@git+https://github.com/unslothai/unsloth.git
 deepspeed
 PyGithub
-flash-attn
+torch
 huggingface-hub
 evaluate
 datasets

@@ -27,6 +27,10 @@ from utils import (
     loftq_init,
     get_module_class_from_name,
 )
+import os
+print("MASTER_ADDR within the script =", os.environ.get("MASTER_ADDR"))
+print("MASTER_PORT within the script =", os.environ.get("MASTER_PORT"))
+print("RANK within the script =", os.environ.get("RANK"), " WORLD_SIZE within the script =", os.environ.get("WORLD_SIZE"))
 
 
 # Define and parse arguments.
