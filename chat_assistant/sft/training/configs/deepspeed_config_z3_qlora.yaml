@@ -11,7 +11,7 @@ distributed_type: DEEPSPEED
 downcast_bf16: 'no'
 main_training_function: main
 mixed_precision: bf16
-num_machines: 4
+num_machines: 3
 num_processes: 4
 machine_rank: 1
 rdzv_backend: c10d

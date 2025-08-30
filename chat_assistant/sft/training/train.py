@@ -20,7 +20,7 @@ import torch
 from transformers import set_seed
 
 from transformers import HfArgumentParser, TrainingArguments
-from trl import SFTTrainer
+from trl import SFTTrainer, SFTConfig
 from utils import (
     create_and_prepare_model,
     create_datasets,
@@ -30,7 +30,8 @@ from utils import (
 import os
 print("MASTER_ADDR within the script =", os.environ.get("MASTER_ADDR"))
 print("MASTER_PORT within the script =", os.environ.get("MASTER_PORT"))
-print("RANK within the script =", os.environ.get("RANK"), " WORLD_SIZE within the script =", os.environ.get("WORLD_SIZE"))
+print("RANK within the script =", os.environ.get("RANK"),
+      " WORLD_SIZE within the script =", os.environ.get("WORLD_SIZE"))
 
 
 # Define and parse arguments.
@@ -102,7 +103,8 @@ class ModelArguments:
     )
     use_loftq: Optional[bool] = field(
         default=False,
-        metadata={"help": "Enables LoftQ init for the LoRA adapters when using QLoRA."},
+        metadata={
+            "help": "Enables LoftQ init for the LoRA adapters when using QLoRA."},
     )
     use_loftq_callback: Optional[bool] = field(
         default=False,
@@ -122,13 +124,6 @@ class DataTrainingArguments:
         default="timdettmers/openassistant-guanaco",
         metadata={"help": "The preference dataset to use."},
     )
-    packing: Optional[bool] = field(
-        default=False,
-        metadata={"help": "Use packing dataset creating."},
-    )
-    dataset_text_field: str = field(
-        default="text", metadata={"help": "Dataset field to use as input text."}
-    )
     max_seq_length: Optional[int] = field(default=512)
     append_concat_token: Optional[bool] = field(
         default=False,
@@ -144,7 +139,8 @@ class DataTrainingArguments:
     )
     splits: Optional[str] = field(
         default="train,test",
-        metadata={"help": "Comma separate list of the splits to use from the dataset."},
+        metadata={
+            "help": "Comma separate list of the splits to use from the dataset."},
     )
 
 
@@ -175,21 +171,24 @@ def main(model_args, data_args, training_args):
         apply_chat_template=model_args.chat_template_format != "none",
     )
 
+    # sft_config = SFTConfig(
+    #     packing=data_args.packing,
+    #     dataset_text_field=data_args.dataset_text_field,
+    #     max_length=data_args.max_seq_length,
+    #     dataset_kwargs={
+    #         "append_concat_token": data_args.append_concat_token,
+    #         "add_special_tokens": data_args.add_special_tokens,
+    #     },
+    # )
+    print(f"training_args: \n{training_args}")
+
     # trainer
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         peft_config=peft_config,
-        packing=data_args.packing,
-        dataset_kwargs={
-            "append_concat_token": data_args.append_concat_token,
-            "add_special_tokens": data_args.add_special_tokens,
-        },
-        dataset_text_field=data_args.dataset_text_field,
-        max_seq_length=data_args.max_seq_length,
     )
     trainer.accelerator.print(f"{trainer.model}")
     if model_args.use_peft_lora:
@@ -213,13 +212,14 @@ def main(model_args, data_args, training_args):
 
     # saving final model
     if trainer.is_fsdp_enabled:
-        trainer.accelerator.state.fsdp_plugin.set_state_dict_type("FULL_STATE_DICT")
+        trainer.accelerator.state.fsdp_plugin.set_state_dict_type(
+            "FULL_STATE_DICT")
     trainer.save_model()
 
 
 if __name__ == "__main__":
     parser = HfArgumentParser(
-        (ModelArguments, DataTrainingArguments, TrainingArguments)
+        (ModelArguments, DataTrainingArguments, SFTConfig)
     )
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,

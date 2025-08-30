@@ -61,7 +61,8 @@ def create_datasets(tokenizer, data_args, training_args, apply_chat_template=Fal
     def preprocess(samples):
         batch = []
         for conversation in samples["messages"]:
-            batch.append(tokenizer.apply_chat_template(conversation, tokenize=False))
+            batch.append(tokenizer.apply_chat_template(
+                conversation, tokenize=False))
         return {"content": batch}
 
     raw_datasets = DatasetDict()
@@ -71,7 +72,8 @@ def create_datasets(tokenizer, data_args, training_args, apply_chat_template=Fal
             dataset = load_dataset(data_args.dataset_name, split=split)
         except DatasetGenerationError:
             # If not, check local dataset
-            dataset = load_from_disk(os.path.join(data_args.dataset_name, split))
+            dataset = load_from_disk(
+                os.path.join(data_args.dataset_name, split))
 
         if "train" in split:
             raw_datasets["train"] = dataset
@@ -113,7 +115,8 @@ def create_and_prepare_model(args, data_args, training_args):
         and torch.distributed.get_world_size() > 1
         and args.use_unsloth
     ):
-        raise NotImplementedError("Unsloth is not supported in distributed training")
+        raise NotImplementedError(
+            "Unsloth is not supported in distributed training")
 
     if args.use_4bit_quantization:
         compute_dtype = getattr(torch, args.bnb_4bit_compute_dtype)
@@ -213,6 +216,7 @@ def create_and_prepare_model(args, data_args, training_args):
 
     return model, peft_config, tokenizer
 
+
 def get_mae(x, y):
     return (x - y).abs().mean()
 
@@ -233,15 +237,19 @@ def error_report(x, y):
 def loftq_init(model, tokenizer, train_dataset, max_seq_length, args):
     if args.use_loftq_callback:
         compute_dtype = getattr(torch, args.bnb_4bit_compute_dtype)
-        base_model = AutoModelForCausalLM.from_pretrained(args.model_name_or_path, torch_dtype=compute_dtype)
-        base_model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=8)
-        random_input_ids = torch.randint(0, len(train_dataset), size=(1,)).numpy().tolist()
+        base_model = AutoModelForCausalLM.from_pretrained(
+            args.model_name_or_path, torch_dtype=compute_dtype)
+        base_model.resize_token_embeddings(
+            len(tokenizer), pad_to_multiple_of=8)
+        random_input_ids = torch.randint(
+            0, len(train_dataset), size=(1,)).numpy().tolist()
         random_inputs = [train_dataset[i]['content'] for i in random_input_ids]
-        random_inputs = tokenizer(random_inputs, return_tensors="pt", padding=True, truncation="max_length", max_length=max_seq_length)
+        random_inputs = tokenizer(random_inputs, return_tensors="pt",
+                                  padding=True, truncation="max_length", max_length=max_seq_length)
         logits_base = base_model(**random_inputs).logits
         del base_model
         gc.collect()
-        
+
         def loftq_callback(model, module_name):
             """Callable to replace weights with LoFTQ if the mse is lower than the current best one."""
             global current_mse
@@ -253,13 +261,13 @@ def loftq_init(model, tokenizer, train_dataset, max_seq_length, args):
                 return True
             print(f"MSE did not improve for module {module_name}")
             return False
-        
+
         replace_lora_weights_loftq(model, callback=loftq_callback)
         logits_loftq_callback = model(**random_inputs).logits
         error_report(logits_base, logits_loftq_callback)
     else:
         replace_lora_weights_loftq(model)
-    
+
 
 def get_module_class_from_name(module, name):
     """
